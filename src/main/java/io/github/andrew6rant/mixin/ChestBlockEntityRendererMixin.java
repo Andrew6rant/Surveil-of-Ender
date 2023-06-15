@@ -1,5 +1,8 @@
 package io.github.andrew6rant.mixin;
 
+import net.minecraft.block.BlockState;
+import net.minecraft.block.EnderChestBlock;
+import net.minecraft.block.ShulkerBoxBlock;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.LidOpenable;
 import net.minecraft.client.model.ModelPart;
@@ -14,6 +17,7 @@ import net.minecraft.client.util.SpriteIdentifier;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RotationAxis;
 import net.minecraft.world.World;
@@ -58,15 +62,25 @@ public class ChestBlockEntityRendererMixin<T extends BlockEntity & LidOpenable> 
         if (isEnder) {
             VertexConsumer vertexConsumer = TexturedRenderLayers.ENDER.getVertexConsumer(vertexConsumers, RenderLayer::getEntityCutout);
             if(entity.hasWorld()) {
+                int directionOffset = 0;
+                BlockState blockState = entity.getWorld().getBlockState(entity.getPos());
+                if (blockState.getBlock() instanceof EnderChestBlock) {
+                    Direction direction = blockState.get(EnderChestBlock.FACING);
+                    switch (direction) {
+                        case NORTH -> directionOffset = 90;
+                        case EAST -> directionOffset = 180;
+                        case SOUTH -> directionOffset = 270;
+                    }
+                }
                 matrices.push();
                 World world = entity.getWorld();
                 BlockPos pos = entity.getPos();
                 PlayerEntity playerEntity = world.getClosestPlayer((double)pos.getX() + 0.5, (double)pos.getY() + 0.5, (double)pos.getZ() + 0.5, 10.0, false);
                 if (playerEntity != null) {
-                    if (hoverCounter > (2*Math.PI)) {
+                    if (hoverCounter > (12*Math.PI)) {
                         hoverCounter = 0;
-                        //singleChestLid.pivotY = 14;
-                        //singleChestLatch.pivotY = 14;
+                        singleChestLid.pivotY = 14;
+                        singleChestLatch.pivotY = 14;
                     } else {
                         float pivotCalc = (float) ((Math.sin(hoverCounter) / 20f));
                         singleChestLid.pivotY += pivotCalc;
@@ -88,6 +102,8 @@ public class ChestBlockEntityRendererMixin<T extends BlockEntity & LidOpenable> 
                         //matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees((float) (-113F * MathHelper.atan2(e, d))));
 
                         matrices.translate(0.5F, 0.0F, 0.5F);
+                        //matrices.multiply(direction.getRotationQuaternion());
+                        matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(directionOffset));
                         matrices.multiply(RotationAxis.POSITIVE_Y.rotation((float) MathHelper.atan2(e, -d)));
                         //matrices.multiply(RotationAxis.NEGATIVE_X.rotationDegrees(hoverCounter));
                         matrices.translate(-0.5F, 0.0F, -0.5F);
@@ -104,12 +120,11 @@ public class ChestBlockEntityRendererMixin<T extends BlockEntity & LidOpenable> 
                 //matrices.translate(-0.5F, 0.0F, -0.5F);
                 singleChestLatch.render(matrices, vertexConsumer, light, overlay);
                 matrices.pop();
-                singleChestBase.render(matrices, vertexConsumer, light, overlay);
             } else {
                 singleChestLid.render(matrices, vertexConsumer, light, overlay);
                 singleChestLatch.render(matrices, vertexConsumer, light, overlay);
-                singleChestBase.render(matrices, vertexConsumer, light, overlay);
             }
+            singleChestBase.render(matrices, vertexConsumer, light, overlay);
             matrices.pop();
             ci.cancel();
         }
